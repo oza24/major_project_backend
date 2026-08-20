@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
+const ApiError = require("../utils/ApiError");
 
 const registerUser = async ({ name, email, phone, password, role }) => {
     const existingUser = await prisma.user.findFirst({
@@ -13,7 +14,11 @@ const registerUser = async ({ name, email, phone, password, role }) => {
     });
 
     if (existingUser) {
-        throw new Error("User with this email or phone already exists");
+        throw new ApiError(
+            "User with this email or phone already exists",
+            409,
+            "DUPLICATE_ENTRY"
+        );
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);

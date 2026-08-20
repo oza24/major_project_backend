@@ -4,41 +4,41 @@ const { getPagination, buildMeta } = require("../utils/pagination");
 
 const USER_SELECT = { id: true, name: true, phone: true, email: true };
 
-const createPatient = async (userId, data) => {
-    const existing = await prisma.patient.findUnique({ where: { userId } });
+const createAshaWorker = async (userId, data) => {
+    const existing = await prisma.ashaWorker.findUnique({ where: { userId } });
 
     if (existing) {
-        throw new ApiError("Patient profile already exists", 409, "PROFILE_EXISTS");
+        throw new ApiError("ASHA worker profile already exists", 409, "PROFILE_EXISTS");
     }
 
-    return prisma.patient.create({
+    return prisma.ashaWorker.create({
         data: { userId, ...data }
     });
 };
 
-const getPatientByUserId = async (userId) => {
-    const patient = await prisma.patient.findUnique({
+const getAshaWorkerByUserId = async (userId) => {
+    const ashaWorker = await prisma.ashaWorker.findUnique({
         where: { userId },
         include: { user: { select: USER_SELECT } }
     });
 
-    if (!patient) {
+    if (!ashaWorker) {
         throw new ApiError(
-            "Patient profile not found. Please create your patient profile first.",
+            "ASHA worker profile not found. Please create your ASHA worker profile first.",
             404,
             "PROFILE_NOT_FOUND"
         );
     }
 
-    return patient;
+    return ashaWorker;
 };
 
-const updatePatient = async (userId, data) => {
-    const existing = await prisma.patient.findUnique({ where: { userId } });
+const updateAshaWorker = async (userId, data) => {
+    const existing = await prisma.ashaWorker.findUnique({ where: { userId } });
 
     if (!existing) {
         throw new ApiError(
-            "Patient profile not found. Please create your patient profile first.",
+            "ASHA worker profile not found. Please create your ASHA worker profile first.",
             404,
             "PROFILE_NOT_FOUND"
         );
@@ -48,13 +48,13 @@ const updatePatient = async (userId, data) => {
         return existing;
     }
 
-    return prisma.patient.update({
+    return prisma.ashaWorker.update({
         where: { userId },
         data
     });
 };
 
-const listPatients = async (query = {}) => {
+const listAshaWorkers = async (query = {}) => {
     const { page, limit, skip, take } = getPagination(query);
     const { search } = query;
 
@@ -70,8 +70,8 @@ const listPatients = async (query = {}) => {
         : {};
 
     const [total, items] = await Promise.all([
-        prisma.patient.count({ where }),
-        prisma.patient.findMany({
+        prisma.ashaWorker.count({ where }),
+        prisma.ashaWorker.findMany({
             where,
             include: { user: { select: USER_SELECT } },
             orderBy: { createdAt: "desc" },
@@ -83,23 +83,23 @@ const listPatients = async (query = {}) => {
     return { items, meta: buildMeta(total, page, limit) };
 };
 
-const getPatientById = async (id) => {
-    const patient = await prisma.patient.findUnique({
+const getAshaWorkerById = async (id) => {
+    const ashaWorker = await prisma.ashaWorker.findUnique({
         where: { id },
         include: { user: { select: USER_SELECT } }
     });
 
-    if (!patient) {
-        throw new ApiError("Patient not found", 404, "NOT_FOUND");
+    if (!ashaWorker) {
+        throw new ApiError("ASHA worker not found", 404, "NOT_FOUND");
     }
 
-    return patient;
+    return ashaWorker;
 };
 
 module.exports = {
-    createPatient,
-    getPatientByUserId,
-    updatePatient,
-    listPatients,
-    getPatientById
+    createAshaWorker,
+    getAshaWorkerByUserId,
+    updateAshaWorker,
+    listAshaWorkers,
+    getAshaWorkerById
 };

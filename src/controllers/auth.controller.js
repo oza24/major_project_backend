@@ -4,10 +4,10 @@ const register = async (req, res) => {
     try {
         const { name, email, phone, password, role } = req.body;
 
-        if (!name || !email || !password) {
+        if (!name || !phone || !email || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Name, email and password are required"
+                message: "Name, phone, email and password are required"
             });
         }
 
@@ -28,7 +28,9 @@ const register = async (req, res) => {
     } catch (error) {
         console.error("Registration error:", error);
 
-        res.status(400).json({
+        const status = error.statusCode || (error.code === "P2002" ? 409 : 400);
+
+        res.status(status).json({
             success: false,
             message: error.message
         });
@@ -60,7 +62,7 @@ const login = async (req, res) => {
     } catch (error) {
         console.error("Login error:", error);
 
-        res.status(401).json({
+        res.status(error.statusCode || 401).json({
             success: false,
             message: error.message
         });

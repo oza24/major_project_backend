@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const prisma = require("../config/prisma");
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -25,17 +26,48 @@ const authenticate = (req, res, next) => {
             process.env.JWT_SECRET
         );
 
-        req.user = decoded;
+        if (!decoded.userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired token"
+            });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true, name: true, phone: true, email: true, role: true }
+        });
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired token"
+            });
+        }
+
+        req.user = {
+            userId: user.id,
+            role: user.role,
+            name: user.name,
+            phone: user.phone,
+            email: user.email
+        };
 
         next();
 
     } catch (error) {
-        console.error("Authentication error:", error.message);
+        if (
+            error.name === "JsonWebTokenError" ||
+            error.name === "TokenExpiredError" ||
+            error.name === "NotBeforeError"
+        ) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired token"
+            });
+        }
 
-        return res.status(401).json({
-            success: false,
-            message: "Invalid or expired token"
-        });
+        next(error);
     }
 };
 
