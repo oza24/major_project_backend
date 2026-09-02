@@ -1,21 +1,33 @@
-const fs = require("fs");
-const path = require("path");
-
-const { PrismaClient } = require("@prisma/client");
+const { Pool } = require("pg");
 const { PrismaPg } = require("@prisma/adapter-pg");
+const { PrismaClient } = require("@prisma/client");
 
-const caPath = path.join(__dirname, "../../certs/ca.pem");
+const isLocal = process.env.DB_HOST === "localhost" || process.env.DB_HOST === "127.0.0.1";
 
-const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        ca: fs.readFileSync(caPath, "utf8"),
-        rejectUnauthorized: true
-    }
-});
+let pool;
 
-const prisma = new PrismaClient({
-    adapter
-});
+if (isLocal) {
+    // Local Docker / dev — explicitly disable SSL
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: false,
+    });
+} else {
+    // Cloud (Aiven etc.) — SSL with CA cert
+    const fs = require("fs");
+    const path = require("path");
+    const caPath = path.join(__dirname, "../../certs/ca.pem");
+
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: {
+            ca: fs.readFileSync(caPath, "utf8"),
+            rejectUnauthorized: true,
+        },
+    });
+}
+
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 module.exports = prisma;

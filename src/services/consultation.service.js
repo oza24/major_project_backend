@@ -67,6 +67,9 @@ const createConsultation = async (user, data) => {
         data: {
             patientId,
             ashaWorkerId,
+            // If the patient selected a specific doctor, assign them directly.
+            // Otherwise the consultation goes into the open pool (doctorId = null).
+            ...(data.doctorId ? { doctorId: data.doctorId } : {}),
             type: data.type,
             symptoms: data.symptoms,
             notes: data.notes,
@@ -129,7 +132,13 @@ const listConsultations = async (user, query = {}) => {
         if (user.role === "PATIENT") {
             where.patientId = profileId;
         } else if (user.role === "DOCTOR") {
-            where.doctorId = profileId;
+            // Doctors see:
+            //  a) Consultations already assigned to them (any status)
+            //  b) PENDING consultations with no assigned doctor yet (open pool)
+            where.OR = [
+                { doctorId: profileId },
+                { doctorId: null, status: "PENDING" }
+            ];
         } else if (user.role === "ASHA") {
             where.ashaWorkerId = profileId;
         }
@@ -327,7 +336,10 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
 
     const profileId = await requireProfile("DOCTOR", user.userId);
 
-    if (consultation.doctorId !== profileId) {
+    // If a specific doctor was already assigned, only that doctor can accept.
+    // If no doctor was assigned yet (patient posted to any available doctor),
+    // auto-assign this doctor and accept.
+    if (consultation.doctorId !== null && consultation.doctorId !== profileId) {
         throw new ApiError(
             "Only the assigned doctor can accept this consultation",
             403,
@@ -335,7 +347,7 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
         );
     }
 
-    const data = { status: "ACTIVE" };
+    const data = { status: "ACTIVE", doctorId: profileId };
 
     if (notes !== undefined) {
         data.notes = notes;

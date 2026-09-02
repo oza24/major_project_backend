@@ -41,18 +41,34 @@ const registerUser = async ({ name, email, phone, password, role }) => {
         }
     });
 
+    // Auto-create role-specific profile so downstream services work immediately.
+    // ADMIN has no sub-table – skip. For all other roles we must succeed.
+    const effectiveRole = (role || "PATIENT").toUpperCase();
+    if (effectiveRole === "PATIENT") {
+        await prisma.patient.create({ data: { userId: user.id } });
+    } else if (effectiveRole === "DOCTOR") {
+        await prisma.doctor.create({ data: { userId: user.id } });
+    } else if (effectiveRole === "ASHA") {
+        await prisma.ashaWorker.create({ data: { userId: user.id } });
+    }
+    // ADMIN: no sub-table needed
+
     return user;
 };
 
 const loginUser = async ({ email, password }) => {
-    const user = await prisma.user.findUnique({
+    const identifier = email ? email.trim() : "";
+    const user = await prisma.user.findFirst({
         where: {
-            email
+            OR: [
+                { email: identifier },
+                { phone: identifier }
+            ]
         }
     });
 
     if (!user) {
-        throw new Error("Invalid email or password");
+        throw new Error("Invalid email/phone or password");
     }
 
     const passwordMatch = await bcrypt.compare(

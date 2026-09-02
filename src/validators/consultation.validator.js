@@ -15,6 +15,9 @@ const createConsultation = [
     body("patientId")
         .optional({ values: "falsy" })
         .isUUID().withMessage("patientId must be a valid UUID"),
+    body("doctorId")
+        .optional({ values: "falsy" })
+        .isUUID().withMessage("doctorId must be a valid UUID"),
     body("type")
         .isIn(CONSULTATION_TYPES).withMessage(`type must be one of: ${CONSULTATION_TYPES.join(", ")}`),
     body("symptoms")
